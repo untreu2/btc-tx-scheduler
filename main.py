@@ -1,3 +1,32 @@
+import os
+import sys
+import subprocess
+
+required_packages = [
+    "bip-utils",
+    "mnemonic",
+    "bit",
+]
+
+def check_and_install_packages():
+    packages_installed = True
+    for package in required_packages:
+        try:
+            __import__(package.replace("-", "_"))
+        except ModuleNotFoundError:
+            packages_installed = False
+            print(f"\nMissing package: {package}")
+            choice = input(f"Do you want to install '{package}' now? (y/n): ").strip().lower()
+            if choice == 'y':
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+            else:
+                print(f"'{package}' is required for this program to run. Please install it manually later.")
+    if not packages_installed:
+        print("\nSome packages were installed. Restarting the script...\n")
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+check_and_install_packages()
+
 import json
 from pathlib import Path
 from datetime import datetime
@@ -24,20 +53,16 @@ def create_transaction():
     amount = float(input("Enter amount (BTC): ").strip())
     fee_rate = float(input("Enter fee rate (satoshis/byte): ").strip())
     scheduled_time_str = input("Enter scheduled time (YYYY-MM-DD HH:MM:SS): ").strip()
-
     try:
         key = generate_private_key(mnemonic_words)
     except ValueError as ve:
         print(f"Error: {ve}")
         return
-
     unspents = key.get_unspents()
     if not unspents:
         print("Error: No unspent transactions available.")
         return
-
     outputs = [(recipient_address, amount, 'btc')]
-
     try:
         unsigned_tx_hex = key.create_transaction(
             outputs, fee=0, absolute_fee=True, unspents=unspents, combine=True
@@ -48,7 +73,6 @@ def create_transaction():
     except ValueError as ve:
         print(f"Error: {ve}")
         return
-
     tx_filename = save_transaction(signed_tx_hex, scheduled_time_str)
     print(f"Transaction created and saved as: {tx_filename.name}")
 
@@ -80,7 +104,6 @@ def broadcast_transaction_cli():
 def check_and_broadcast_transactions():
     transactions = load_transactions()
     now = get_current_time()
-
     for tx in transactions:
         if tx['scheduled_time'] <= now:
             print(f"Broadcasting transaction ID: {tx['file'].name}")
@@ -100,9 +123,7 @@ def main():
         print("4. Broadcast a Transaction")
         print("5. Start Auto-Broadcast")
         print("6. Exit")
-
         choice = input("Choose an option: ").strip()
-
         if choice == '1':
             list_transactions()
         elif choice == '2':
